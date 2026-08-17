@@ -14,9 +14,9 @@ void app_main(){
 
     // Pequeno loop de teste: Pisca o primeiro LED de cada matriz para testar
     while(1) {
-        max7219_write_all(MAX7219_REG_DIGIT0, 0x01); // Liga o primeiro bit da linha 0
+        display_write_all(MAX7219_REG_DIGIT0, 0x01); // Liga o primeiro bit da linha 0
         vTaskDelay(pdMS_TO_TICKS(500));
-        max7219_write_all(MAX7219_REG_DIGIT0, 0x00); // Desliga
+        display_write_all(MAX7219_REG_DIGIT0, 0x00); // Desliga
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 

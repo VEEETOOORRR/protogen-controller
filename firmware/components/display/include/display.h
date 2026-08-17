@@ -25,6 +25,10 @@
 
 void spi_conf();
 
-void max7219_write_all(uint8_t reg, uint8_t data);
+void display_write_all(uint8_t reg, uint8_t data);
+
+void display_set_pixel(int x, int y, uint8_t state);
+
+void display_render();
 
 #endif
