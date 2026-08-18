@@ -5,12 +5,14 @@
 #include "string.h"
 #include <stdio.h>
 
+#include "expressions.h"
+
 #define PIN_NUM_MISO   13   // O MAX7219 não envia dados de volta, pino não usado
 #define PIN_NUM_MOSI   11   // Conecta no DIN da primeira matriz
 #define PIN_NUM_CLK    12   // Conecta no CLK das matrizes
 #define PIN_NUM_CS     10   // Conecta no CS/LOAD das matrizes
 
-#define NUM_MODULES    8    // Quantidade de matrizes 8x8 encadeadas
+#define NUM_MODULES    14    // Quantidade de matrizes 8x8 encadeadas
 
 // Registradores do MAX7219
 #define MAX7219_REG_NOOP         0x00
@@ -21,7 +23,7 @@
 #define MAX7219_REG_SHUTDOWN     0x0C
 #define MAX7219_REG_DISPLAY_TEST 0x0F
 
-#define DISPLAY_INTENSITY        0x01
+#define DISPLAY_INTENSITY        0x01 // Intensidade default (Vai de 0x01 a 0x0F)
 
 void spi_conf();
 
