@@ -82,3 +82,9 @@ sdkconfig
 .vscode/
 .devcontainer/
 *.zip
+
+# Expressions files
+scripts/*.bmp
+scripts/*.jpg
+scripts/*.jpeg
+scripts/*.png
