@@ -1,8 +1,9 @@
 #include "display.h"
+#include "expressions.h"
 
 static spi_device_handle_t spi_handle;
 
-uint8_t framebuffer[NUM_MODULES * 8] = {0};
+FaceBuffer fb = {0};
 
 void spi_conf(){
 
@@ -78,7 +79,7 @@ void display_render(){
             
             // Pega o byte correspondente a essa linha no framebuffer
             // Aqui fazemos o mapeamento linear da memória
-            tx_buf[i * 2 + 1] = framebuffer[line + (i * 8)]; 
+            tx_buf[i * 2 + 1] = fb[line + (i * 8)]; 
         }
 
         spi_transaction_t t;
