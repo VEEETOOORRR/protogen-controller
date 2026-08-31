@@ -1,9 +1,9 @@
+#include <string.h>
+
 #include "display.h"
 #include "expressions.h"
 
 static spi_device_handle_t spi_handle;
-
-FaceBuffer fb = {0};
 
 void spi_conf(){
 
@@ -19,7 +19,7 @@ void spi_conf(){
 
     // Configuração específica para o MAX7219
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 10000000, // 10 MHz
+        .clock_speed_hz = 1000000, // 1 MHz
         .mode = 0,
         .spics_io_num = PIN_NUM_CS,
         .queue_size = 7
@@ -67,27 +67,81 @@ void display_write_all(uint8_t reg, uint8_t data){
     free(tx_buf);
 }
 
-void display_render(){
-    // O MAX7219 tem 8 registradores de dígitos (linhas) de 0x01 a 0x08
-    for (uint8_t line = 0; line < 8; line++) {
-        uint8_t tx_buf[NUM_MODULES * 2];
-        
-        // Monta o pacote SPI para essa linha específica em todas as matrizes
-        for (int i = 0; i < NUM_MODULES; i++) {
-            // Endereço do registrador da linha (0x01 a 0x08)
-            tx_buf[i * 2]     = MAX7219_REG_DIGIT0 + line; 
-            
-            // Pega o byte correspondente a essa linha no framebuffer
-            // Aqui fazemos o mapeamento linear da memória
-            tx_buf[i * 2 + 1] = fb[line + (i * 8)]; 
-        }
-
-        spi_transaction_t t;
-        memset(&t, 0, sizeof(t));
-        t.length = NUM_MODULES * 2 * 8;
-        t.tx_buffer = tx_buf;
-
-        spi_device_transmit(spi_handle, &t);
+void display_clean_all(){
+    for(uint8_t i = 0; i < 8; i++){
+        display_write_all(MAX7219_REG_DIGIT0 + i, 0);
     }
 }
 
+void display_update(StaticFace_t *buffer){
+
+    // lineariza o buffer
+    uint8_t *buffer_linearizado[NUM_MODULES] = {
+
+        buffer->left_eye[1],
+        buffer->left_eye[0],
+
+        buffer->left_mouth[3],
+        buffer->left_mouth[2],
+        buffer->left_mouth[1],
+        buffer->left_mouth[0],
+
+        buffer->left_nose[0],
+        buffer->right_nose[0],
+
+        buffer->right_mouth[3],
+        buffer->right_mouth[2],
+        buffer->right_mouth[1],
+        buffer->right_mouth[0],
+
+        buffer->right_eye[1],
+        buffer->right_eye[0]
+    };
+
+    for (int linha = 0; linha < 8; linha++) {
+
+        uint8_t tx_data[28];
+        
+        for (int comando = 0; comando < 28; comando += 2) {
+            int matriz_atual = comando / 2; // Vai de 0 a 13
+            
+            tx_data[comando] = (MAX7219_REG_DIGIT0 + 7) - linha; // Gambiarra para inverter as matrizes de baixo pra cima
+            tx_data[comando + 1] = buffer_linearizado[matriz_atual][linha];
+        }
+
+        spi_transaction_t t;
+        memset(&t, 0, sizeof(t)); // Limpa a struct a ser enviada
+
+        t.length = 14 * 2 * 8;    // 224 bits (28 bytes no total)
+        t.tx_buffer = tx_data;
+
+        spi_device_polling_transmit(spi_handle, &t);
+    }
+}
+
+// Olho Esquerdo / Direito
+void buffer_update_left_eye(StaticFace_t *buffer, const Eye e) {
+    memcpy(buffer->left_eye, e, sizeof(Eye));
+}
+
+void buffer_update_right_eye(StaticFace_t *buffer, const Eye e) {
+    memcpy(buffer->right_eye, e, sizeof(Eye));
+}
+
+// Boca Esquerda / Direita
+void buffer_update_left_mouth(StaticFace_t *buffer, const Mouth m) {
+    memcpy(buffer->left_mouth, m, sizeof(Mouth));
+}
+
+void buffer_update_right_mouth(StaticFace_t *buffer, const Mouth m) {
+    memcpy(buffer->right_mouth, m, sizeof(Mouth));
+}
+
+// Nariz Esquerdo / Direito
+void buffer_update_left_nose(StaticFace_t *buffer, const Nose n) {
+    memcpy(buffer->left_nose, n, sizeof(Nose));
+}
+
+void buffer_update_right_nose(StaticFace_t *buffer, const Nose n) {
+    memcpy(buffer->right_nose, n, sizeof(Nose));
+}
