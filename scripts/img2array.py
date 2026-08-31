@@ -46,12 +46,12 @@ def gerar_codigo(caminho_imagem, nome_base, tipo):
     if tipo == "todos":
         largura_esperada = 112
         secoes = [
-            ("BocaDireita",   0,  32),
-            ("OlhoDireito",   32, 16),
+            ("OlhoDireito",   0,  16),
+            ("BocaDireita",   16, 32),
             ("NarizDireito",  48, 8),
             ("NarizEsquerdo", 56, 8),
-            ("OlhoEsquerdo",  64, 16),
-            ("BocaEsquerda",  80, 32),
+            ("BocaEsquerda",  64, 32),
+            ("OlhoEsquerdo",  96, 16),
 
 
         ]
@@ -94,7 +94,7 @@ def gerar_codigo(caminho_imagem, nome_base, tipo):
             
             nome_constante = f"{nome_base}_{nome_secao.upper()}{sufixo_frame}"
             print(f"// {nome_secao} ({width}x8 -> {qtd_matrizes} matrizes)")
-            print(f"const Matriz8x8 {nome_constante}[{qtd_matrizes}] = {{")
+            print(f"static const Matrix8x8 {nome_constante}[{qtd_matrizes}] = {{")
             for m in matrizes:
                 print(f"    {m},")
             print("};\n")
