@@ -1,6 +1,9 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
 #include "driver/spi_master.h"
 #include "string.h"
 #include <stdio.h>
@@ -28,6 +31,17 @@
 #define MAX7219_REG_DISPLAY_TEST 0x0F
 
 #define DISPLAY_INTENSITY        0x01 // Intensidade default (Vai de 0x01 a 0x0F)
+
+typedef enum {
+    DISPLAY_CMD_NEUTRAL,
+    DISPLAY_CMD_BOOP
+} display_cmd_t;
+
+extern QueueHandle_t display_cmd_queue;
+
+void display_init();
+
+void display_init();
 
 void spi_conf(); // Inicializa e configura os displays via SPI
 

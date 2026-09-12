@@ -3,7 +3,82 @@
 #include "display.h"
 #include "expressions.h"
 
+
+// Handle para o SPI
 static spi_device_handle_t spi_handle;
+
+// Fila global para receber os comandos
+QueueHandle_t display_cmd_queue = NULL;
+
+static void set_expression_neutral(StaticFace_t *face) {
+    buffer_update_left_eye(face, EYE_L_NEUTRAL);
+    buffer_update_right_eye(face, EYE_R_NEUTRAL);
+    buffer_update_left_mouth(face, MOUTH_L_NEUTRAL);
+    buffer_update_right_mouth(face, MOUTH_R_NEUTRAL);
+    buffer_update_left_nose(face, NOSE_L_NEUTRAL);
+    buffer_update_right_nose(face, NOSE_R_NEUTRAL);
+}
+
+static void set_expression_boop(StaticFace_t *face) {
+    buffer_update_left_eye(face, EYE_L_BOOP);
+    buffer_update_right_eye(face, EYE_R_BOOP);
+    buffer_update_left_mouth(face, MOUTH_L_BOOP);
+    buffer_update_right_mouth(face, MOUTH_R_BOOP);
+    buffer_update_left_nose(face, NOSE_L_BOOP);
+    buffer_update_right_nose(face, NOSE_R_BOOP);
+}
+
+
+static void display_task(void* arg){
+    StaticFace_t current_face;
+    display_cmd_t cmd;
+    
+    // O tempo inicial de espera na fila é "Infinito"
+    TickType_t wait_time = portMAX_DELAY; 
+
+    // Estado inicial
+    set_expression_neutral(&current_face);
+    display_update(&current_face);
+
+    for(;;){
+        // Fica bloqueado até receber algo OU até o wait_time acabar
+        if (xQueueReceive(display_cmd_queue, &cmd, wait_time) == pdTRUE) {
+            
+            // Recebeu um comando explicitamente
+            if (cmd == DISPLAY_CMD_BOOP) {
+                set_expression_boop(&current_face);
+                display_update(&current_face);
+                
+                // Muda a paciência da fila para 3 segundos. 
+                // Se não houver novos toques em 3s, ela vai dar timeout.
+                wait_time = pdMS_TO_TICKS(3000); 
+            } 
+            else if (cmd == DISPLAY_CMD_NEUTRAL) {
+                set_expression_neutral(&current_face);
+                display_update(&current_face);
+                wait_time = portMAX_DELAY; // Volta a dormir para sempre
+            }
+
+        } else {
+            // Ocorreu o Timeout! Ninguém mandou comando nos últimos 3 segundos.
+            set_expression_neutral(&current_face);
+            display_update(&current_face);
+            
+            // Restaura a espera para infinito para não ficar atualizando a tela à toa
+            wait_time = portMAX_DELAY; 
+        }
+    }
+}
+
+void display_init(){
+    spi_conf();
+
+    // Cria a fila para receber comandos de outras tasks
+    display_cmd_queue = xQueueCreate(5, sizeof(display_cmd_t));
+
+    // Cria a task do display
+    xTaskCreate(display_task, "display_task", 4096, NULL, 5, NULL);
+}
 
 void spi_conf(){
 
@@ -145,3 +220,5 @@ void buffer_update_left_nose(StaticFace_t *buffer, const Nose n) {
 void buffer_update_right_nose(StaticFace_t *buffer, const Nose n) {
     memcpy(buffer->right_nose, n, sizeof(Nose));
 }
+
+
