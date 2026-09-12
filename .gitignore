@@ -31,6 +31,7 @@ build/
 flasher_args.json # Generated in build directory
 sdkconfig.old
 sdkconfig
+dependencies.lock
 
 # ESP-IDF dependencies
 # For older versions or manual component management
@@ -62,6 +63,7 @@ venv/
 env/
 
 # Language Servers
+.clangd
 .clangd/
 .ccls-cache/
 compile_commands.json
