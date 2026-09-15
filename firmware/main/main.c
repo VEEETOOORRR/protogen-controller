@@ -4,6 +4,7 @@
 
 #include "display.h"
 #include "boopsensor.h"
+#include "fan.h"
 
 void app_main(void) {
     // Inicializa o subsistema de display 
@@ -11,4 +12,8 @@ void app_main(void) {
 
     // Inicializa o sensor de boop
     boopsensor_init();
+
+    pwm_init();
+    set_duty(100);
+    
 }
