@@ -7,7 +7,7 @@
 #define PIN_LEDSTRIP_R 4
 #define PIN_LEDSTRIP_L 5
 
-#define QNT_LEDS 10
+#define QNT_LEDS 13
 
 typedef struct {
     uint8_t r;
