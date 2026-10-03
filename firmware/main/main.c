@@ -6,6 +6,7 @@
 #include "boopsensor.h"
 #include "fan.h"
 #include "ledstrip.h"
+#include "imu.h"
 
 void app_main(void) {
     // Inicializa o subsistema de display 
@@ -17,6 +18,8 @@ void app_main(void) {
     pwm_init();
 
     ledstrip_init();
+
+    imu_init();
 
     Rgb_led rgb;
 
