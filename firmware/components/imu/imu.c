@@ -1,12 +1,4 @@
-#include <stdio.h>
-#include <math.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/i2c_master.h"
-#include "esp_log.h"
-
 #include "imu.h"
-#include "display.h" // Para ter acesso à fila display_cmd_queue e aos comandos
 
 static const char *TAG = "IMU";
 static i2c_master_dev_handle_t imu_handle;
@@ -19,6 +11,9 @@ static void lsm6ds3_write_reg(uint8_t reg, uint8_t data) {
 
 // A Task que fará a leitura e o filtro complementar
 static void imu_task(void *arg) {
+
+    system_event_t event = {.type = EVENT_IMU_CENTERED, .payload = 0};
+
     uint8_t reg_addr = 0x22; 
     uint8_t data[12];
     
@@ -69,36 +64,36 @@ static void imu_task(void *arg) {
             float accel_pitch = atan2(-raw_ax, sqrt(raw_ay * raw_ay + raw_az * raw_az)) * 180.0 / M_PI;
             float accel_roll = atan2(raw_ay, raw_az) * 180.0 / M_PI;
 
-            // 3. FILTRO COMPLEMENTAR CORRIGIDO (Gy na fórmula do Pitch, Gx na fórmula do Roll)
+            // 3. FILTRO COMPLEMENTAR
             pitch = 0.96f * (pitch + gy_dps * dt) + 0.04f * accel_pitch;
             roll  = 0.96f * (roll  + gx_dps * dt) + 0.04f * accel_roll;
 
-            // Reduzimos o print para não poluir o terminal, imprimindo apenas de vez em quando
-            // printf("pitch: %.2f roll: %.2f\r\n", pitch, roll);
-
-            // 4. Lógica de Interação
-            if ((roll > 30.0f || roll < -30.0f) && !is_tilted) {
-                is_tilted = true;
-                if (display_cmd_queue != NULL) {
-                    display_cmd_t cmd = DISPLAY_CMD_BOOP; 
-                    xQueueSend(display_cmd_queue, &cmd, 0);
+            // 4. Lógica de Interação e Tratamento de Eventos
+            if (!is_tilted) {
+                if (roll > 30.0f) {
+                    is_tilted = true;
+                    ESP_LOGI(TAG, "Cabeça inclinada para a Direita.");
+                    event.type = EVENT_IMU_TILT_RIGHT;
+                    control_send_event(&event);
+                } else if (roll < -30.0f) {
+                    is_tilted = true;
+                    ESP_LOGI(TAG, "Cabeça inclinada para a Esquerda.");
+                    event.type = EVENT_IMU_TILT_LEFT;
+                    control_send_event(&event);
                 }
             } 
             else if (roll > -15.0f && roll < 15.0f && is_tilted) {
                 is_tilted = false;
                 ESP_LOGI(TAG, "Cabeça reta.");
-                if (display_cmd_queue != NULL) {
-                    display_cmd_t cmd = DISPLAY_CMD_NEUTRAL;
-                    xQueueSend(display_cmd_queue, &cmd, 0);
-                }
+                event.type = EVENT_IMU_CENTERED;
+                control_send_event(&event);
             }
-            
-            // O DELAY DE 300ms FOI REMOVIDO DAQUI!
+
         } else {
             ESP_LOGE(TAG, "Erro na leitura do I2C");
         }
         
-        // Mantém ESTRITAMENTE a frequência de 50Hz (20ms) para bater com o dt = 0.02f
+        // Mantém ESTRITAMENTE a frequência de 50Hz (20ms)
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
@@ -132,8 +127,6 @@ void imu_init(void) {
     
     // CTRL2_G (0x11): Giroscópio ligado em 104Hz, fundo de escala 2000 dps
     lsm6ds3_write_reg(0x11, 0x4C);
-
-    printf("LSM6DS3 Configurado. Iniciando IMU Task.\r\n");
 
     // Cria a task do IMU com prioridade média (acima das tarefas básicas, mas não critica)
     xTaskCreate(imu_task, "imu_task", 4096, NULL, 5, NULL);
