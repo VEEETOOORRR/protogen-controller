@@ -4,7 +4,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#include "display.h"
+
+#include "control.h"
+#include "system_events.h"
 
 
 #define BOOPSENSOR_PIN 21

@@ -15,18 +15,16 @@ static void IRAM_ATTR boop_isr_handler(void* arg) {
     }
 }
 
-// 2. A Task - Roda no contexto do RTOS
 static void boop_task(void* arg) {
+    system_event_t event = {.type = EVENT_BOOP_TOUCHED, .payload = 0};
+    
     for(;;) {
         // Fica bloqueada (consumindo 0% de CPU) até receber a notificação da ISR
         // O pdTRUE zera o contador de notificações após a leitura
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         
         // Envia o comando de BOOP para a fila do display
-        if (display_cmd_queue != NULL) {
-            display_cmd_t cmd = DISPLAY_CMD_BOOP;
-            xQueueSend(display_cmd_queue, &cmd, 0);
-        }
+        control_send_event(&event);
     }
 }
 

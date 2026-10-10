@@ -41,8 +41,6 @@ extern QueueHandle_t display_cmd_queue;
 
 void display_init();
 
-void display_init();
-
 void spi_conf(); // Inicializa e configura os displays via SPI
 
 void display_write_all(uint8_t reg, uint8_t data); // Manda o mesmo comando para cada uma das matrizes 8x8
