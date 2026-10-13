@@ -8,8 +8,6 @@
 #include "string.h"
 #include <stdio.h>
 
-#include "expressions.h"
-
 // Configurações SPI
 #define PIN_NUM_MISO  13      // O MAX7219 não envia dados de volta, pino não usado
 #define PIN_NUM_MOSI  10      // Conecta no DIN da primeira matriz
@@ -33,29 +31,45 @@
 #define DISPLAY_INTENSITY        0x01 // Intensidade default (Vai de 0x01 a 0x0F)
 
 typedef enum {
-    DISPLAY_CMD_NEUTRAL,
-    DISPLAY_CMD_BOOP
+    EYE_CMD_NO_CHANGE = 0,
+    EYE_CMD_NEUTRAL,
+    EYE_CMD_HAPPY,
+    EYE_CMD_SAD,
+    EYE_CMD_BOOP,
+    EYE_CMD_FULL,
+    EYE_CMD_CLEAR
+} eye_cmd_t;
+
+typedef enum {
+    MOUTH_CMD_NO_CHANGE = 0,
+    MOUTH_CMD_NEUTRAL,
+    MOUTH_CMD_TALK_HALF,
+    MOUTH_CMD_TALK_FULL,
+    MOUTH_CMD_BOOP,
+    MOUTH_CMD_FULL,
+    MOUTH_CMD_CLEAR
+} mouth_cmd_t;
+
+typedef enum {
+    NOSE_CMD_NO_CHANGE = 0,
+    NOSE_CMD_NEUTRAL,
+    NOSE_CMD_FULL,
+    NOSE_CMD_CLEAR
+} nose_cmd_t;
+
+typedef struct {
+    eye_cmd_t   left_eye;
+    eye_cmd_t   right_eye;
+    nose_cmd_t  left_nose;
+    nose_cmd_t  right_nose;
+    mouth_cmd_t left_mouth;
+    mouth_cmd_t right_mouth;
 } display_cmd_t;
 
-extern QueueHandle_t display_cmd_queue;
-
+// Função de inicialização do display
 void display_init();
 
-void spi_conf(); // Inicializa e configura os displays via SPI
-
-void display_write_all(uint8_t reg, uint8_t data); // Manda o mesmo comando para cada uma das matrizes 8x8
-
-void display_clean_all(); // Limpa todas as matrizes 8x8
-
-void display_update(StaticFace_t *buffer); // Atualiza o display de acordo com o buffer global
-
-void buffer_update_left_eye(StaticFace_t *buffer, const Eye e); // Atualiza no buffer as matrizes referentes ao olho esquerdo
-void buffer_update_right_eye(StaticFace_t *buffer, const Eye e); // Atualiza no buffer as matrizes referentes ao olho direito
-void buffer_update_left_mouth(StaticFace_t *buffer, const Mouth m); // Atualiza no buffer as matrizes referentes à boca esquerda
-void buffer_update_right_mouth(StaticFace_t *buffer, const Mouth m); // Atualiza no buffer as matrizes referentes à boca direita
-void buffer_update_left_nose(StaticFace_t *buffer, const Nose n); // Atualiza no buffer as matrizes referentes ao nariz esquerdo
-void buffer_update_right_nose(StaticFace_t *buffer, const Nose n); // Atualiza no buffer as matrizes referentes ao nariz direito
-
-
+// Envia comando para fila
+void display_send_expression(display_cmd_t *cmd);
 
 #endif
