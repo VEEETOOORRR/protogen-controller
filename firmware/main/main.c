@@ -13,26 +13,22 @@ void app_main(void) {
     // Inicializa o subsistema de display 
     display_init();
 
+    // Inicializa fitas de led
+    ledstrip_init();
+
+    // Inicializa o subsistema de controle
+    control_init();
+
     // Inicializa o sensor de boop
     boopsensor_init();
 
     // Inicializa ventoinha
     pwm_init();
 
-    // Inicializa fitas de led
-    ledstrip_init();
 
+
+    // Inicializa IMU
     imu_init();
 
-    Rgb_led rgb;
-
-
-
     set_duty(100);
-
-
-    while(1){
-
-    }
-    
 }
