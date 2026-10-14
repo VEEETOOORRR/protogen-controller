@@ -8,6 +8,7 @@
 #include "ledstrip.h"
 #include "control.h"
 #include "imu.h"
+#include "microphone.h"
 
 void app_main(void) {
     // Inicializa o subsistema de display 
@@ -25,7 +26,8 @@ void app_main(void) {
     // Inicializa ventoinha
     pwm_init();
 
-
+    // Inicializa microfone
+    mic_init();
 
     // Inicializa IMU
     imu_init();
