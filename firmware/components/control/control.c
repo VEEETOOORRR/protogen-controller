@@ -10,10 +10,8 @@ static void control_task(void *){
     // INSTANCIADOS APENAS POR RAZÕES DE TESTE!!
     display_cmd_t neutral = {
         .left_eye = EYE_CMD_NEUTRAL,
-        .left_mouth = MOUTH_CMD_NEUTRAL,
         .left_nose = NOSE_CMD_NEUTRAL,
         .right_eye = EYE_CMD_NEUTRAL,
-        .right_mouth = MOUTH_CMD_NEUTRAL,
         .right_nose = NOSE_CMD_NEUTRAL   
     };
     display_cmd_t boop = {
@@ -23,6 +21,21 @@ static void control_task(void *){
         .right_eye = EYE_CMD_BOOP,
         .right_mouth = MOUTH_CMD_BOOP,
         .right_nose = NOSE_CMD_NEUTRAL
+    };
+
+    display_cmd_t silent_mouth = {
+        .left_mouth = MOUTH_CMD_NEUTRAL,
+        .right_mouth = MOUTH_CMD_NEUTRAL
+    };
+
+    display_cmd_t half_mouth = {
+        .left_mouth = MOUTH_CMD_TALK_HALF,
+        .right_mouth = MOUTH_CMD_TALK_HALF
+    };
+
+    display_cmd_t full_mouth = {
+        .left_mouth = MOUTH_CMD_TALK_FULL,
+        .right_mouth = MOUTH_CMD_TALK_FULL
     };
 
     ledstrip_change_color(RGB_STRIP_BOTH, 0, 16, (Rgb_led){255, 200, 0});
@@ -42,14 +55,19 @@ static void control_task(void *){
                     display_send_expression(&neutral);
                     break;
 
+                case EVENT_VOICE_SILENCE:
+                    display_send_expression(&silent_mouth);
+                    break;
+
                 case EVENT_VOICE_TALK_HALF:
+                    display_send_expression(&half_mouth);
                     break;
 
                 case EVENT_VOICE_TALK_FULL:
+                    display_send_expression(&full_mouth);
                     break;
 
-                case EVENT_VOICE_SILENCE:
-                    break;
+
 
                 case EVENT_IMU_TILT_RIGHT:
                     display_send_expression(&boop);

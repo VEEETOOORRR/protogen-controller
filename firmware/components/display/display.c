@@ -240,6 +240,14 @@ static void apply_mouth_cmd(StaticFace_t *buffer, mouth_cmd_t mouth_cmd, display
                 memcpy(&buffer->left_mouth, MOUTH_L_BOOP, sizeof(Mouth));
                 break;
 
+            case MOUTH_CMD_TALK_HALF:
+                memcpy(&buffer->left_mouth, MOUTH_L_HALF, sizeof(Mouth));
+                break;
+
+            case MOUTH_CMD_TALK_FULL:
+                memcpy(&buffer->left_mouth, MOUTH_L_FULL, sizeof(Mouth));
+                break;
+
             default:
                 break;
         }
@@ -251,6 +259,14 @@ static void apply_mouth_cmd(StaticFace_t *buffer, mouth_cmd_t mouth_cmd, display
 
             case MOUTH_CMD_BOOP:
                 memcpy(&buffer->right_mouth, MOUTH_R_BOOP, sizeof(Mouth));
+                break;
+
+            case MOUTH_CMD_TALK_HALF:
+                memcpy(&buffer->right_mouth, MOUTH_R_HALF, sizeof(Mouth));
+                break;
+
+            case MOUTH_CMD_TALK_FULL:
+                memcpy(&buffer->right_mouth, MOUTH_R_FULL, sizeof(Mouth));
                 break;
 
             default:
