@@ -3,84 +3,87 @@
 #include "display.h"
 #include "expressions.h"
 
+// Typedef usado para determinar qual lado do buffer é preciso mudar
+typedef enum {
+    DISPLAY_L,
+    DISPLAY_R,
+    DISPLAY_BOTH
+} display_side_t;
 
 // Handle para o SPI
-static spi_device_handle_t spi_handle;
+static spi_device_handle_t spi_handle = NULL;
 
 // Fila global para receber os comandos
 QueueHandle_t display_cmd_queue = NULL;
 
-static void set_expression_neutral(StaticFace_t *face) {
-    buffer_update_left_eye(face, EYE_L_NEUTRAL);
-    buffer_update_right_eye(face, EYE_R_NEUTRAL);
-    buffer_update_left_mouth(face, MOUTH_L_NEUTRAL);
-    buffer_update_right_mouth(face, MOUTH_R_NEUTRAL);
-    buffer_update_left_nose(face, NOSE_L_NEUTRAL);
-    buffer_update_right_nose(face, NOSE_R_NEUTRAL);
-}
+static void display_task(void* arg);
+static void spi_conf(void);
+static void display_write_all(uint8_t reg, uint8_t data);
+static void display_clean_all(void);
+static void display_update(StaticFace_t *buffer);
+static void apply_eye_cmd(StaticFace_t *buffer, eye_cmd_t eye_cmd, display_side_t side);
+static void apply_mouth_cmd(StaticFace_t *buffer, mouth_cmd_t mouth_cmd, display_side_t side);
+static void apply_nose_cmd(StaticFace_t *buffer, nose_cmd_t nose_cmd, display_side_t side);
 
-static void set_expression_boop(StaticFace_t *face) {
-    buffer_update_left_eye(face, EYE_L_BOOP);
-    buffer_update_right_eye(face, EYE_R_BOOP);
-    buffer_update_left_mouth(face, MOUTH_L_BOOP);
-    buffer_update_right_mouth(face, MOUTH_R_BOOP);
-    buffer_update_left_nose(face, NOSE_L_BOOP);
-    buffer_update_right_nose(face, NOSE_R_BOOP);
-}
-
-
+// Task do display
 static void display_task(void* arg){
-    StaticFace_t current_face;
     display_cmd_t cmd;
-    
-    // O tempo inicial de espera na fila é "Infinito"
-    TickType_t wait_time = portMAX_DELAY; 
 
     // Estado inicial
-    set_expression_neutral(&current_face);
+    StaticFace_t current_face;
+
+    // Aplica expressão neutra padrão no início do programa
+    apply_eye_cmd(&current_face, EYE_CMD_NEUTRAL, DISPLAY_BOTH);
+    apply_mouth_cmd(&current_face, MOUTH_CMD_NEUTRAL, DISPLAY_BOTH);
+    apply_nose_cmd(&current_face, NOSE_CMD_NEUTRAL, DISPLAY_BOTH);
+
     display_update(&current_face);
 
     for(;;){
-        // Fica bloqueado até receber algo OU até o wait_time acabar
-        if (xQueueReceive(display_cmd_queue, &cmd, wait_time) == pdTRUE) {
-            
-            // Recebeu um comando explicitamente
-            if (cmd == DISPLAY_CMD_BOOP) {
-                set_expression_boop(&current_face);
-                display_update(&current_face);
-                
-                // Muda a paciência da fila para 3 segundos. 
-                // Se não houver novos toques em 3s, ela vai dar timeout.
-                wait_time = pdMS_TO_TICKS(3000); 
-            } 
-            else if (cmd == DISPLAY_CMD_NEUTRAL) {
-                set_expression_neutral(&current_face);
-                display_update(&current_face);
-                wait_time = portMAX_DELAY; // Volta a dormir para sempre
+        // Fica bloqueado até receber algo
+        if (xQueueReceive(display_cmd_queue, &cmd, portMAX_DELAY) == pdTRUE) {
+
+            int changed = 0;
+
+            if(cmd.left_eye != EYE_CMD_NO_CHANGE){
+                changed = 1;
+                apply_eye_cmd(&current_face, cmd.left_eye, DISPLAY_L);
             }
 
-        } else {
-            // Ocorreu o Timeout! Ninguém mandou comando nos últimos 3 segundos.
-            set_expression_neutral(&current_face);
-            display_update(&current_face);
-            
-            // Restaura a espera para infinito para não ficar atualizando a tela à toa
-            wait_time = portMAX_DELAY; 
+            if(cmd.left_mouth != MOUTH_CMD_NO_CHANGE){
+                changed = 1;
+                apply_mouth_cmd(&current_face, cmd.left_mouth, DISPLAY_L);
+            }
+
+            if(cmd.left_nose != NOSE_CMD_NO_CHANGE){
+                changed = 1;
+                apply_nose_cmd(&current_face, cmd.left_nose, DISPLAY_L);
+            }
+
+            if(cmd.right_eye != EYE_CMD_NO_CHANGE){
+                changed = 1;
+                apply_eye_cmd(&current_face, cmd.right_eye, DISPLAY_R);
+            }
+
+            if(cmd.right_mouth != MOUTH_CMD_NO_CHANGE){
+                changed = 1;
+                apply_mouth_cmd(&current_face, cmd.right_mouth, DISPLAY_R);
+            }
+
+            if(cmd.right_nose != NOSE_CMD_NO_CHANGE){
+                changed = 1;
+                apply_nose_cmd(&current_face, cmd.right_nose, DISPLAY_R);
+            }
+
+            if(changed == 1){
+                display_update(&current_face);
+            }
         }
     }
 }
 
-void display_init(){
-    spi_conf();
-
-    // Cria a fila para receber comandos de outras tasks
-    display_cmd_queue = xQueueCreate(5, sizeof(display_cmd_t));
-
-    // Cria a task do display
-    xTaskCreate(display_task, "display_task", 4096, NULL, 5, NULL);
-}
-
-void spi_conf(){
+// Inicializa periférico SPI
+static void spi_conf(){
 
     // Configuração do barramento SPI
     spi_bus_config_t busfcg = {
@@ -121,9 +124,9 @@ void spi_conf(){
 }
 
 // Função para escrever em todos os módulos do display
-void display_write_all(uint8_t reg, uint8_t data){
+static void display_write_all(uint8_t reg, uint8_t data){
     
-    uint8_t *tx_buf = malloc(NUM_MODULES * 2);
+    uint8_t tx_buf[NUM_MODULES * 2];
 
     for (int i = 0; i < NUM_MODULES * 2; i += 2){
         tx_buf[i] = reg;
@@ -138,17 +141,17 @@ void display_write_all(uint8_t reg, uint8_t data){
     t.tx_buffer = tx_buf;
 
     spi_device_transmit(spi_handle, &t);
-
-    free(tx_buf);
 }
 
-void display_clean_all(){
+// Função auxiliar para limpar todos os displays
+static void display_clean_all(){
     for(uint8_t i = 0; i < 8; i++){
         display_write_all(MAX7219_REG_DIGIT0 + i, 0);
     }
 }
 
-void display_update(StaticFace_t *buffer){
+// Função auxiliar para atualizar todos os displays de acordo com o que está no buffer
+static void display_update(StaticFace_t *buffer){
 
     // lineariza o buffer
     uint8_t *buffer_linearizado[NUM_MODULES] = {
@@ -194,31 +197,103 @@ void display_update(StaticFace_t *buffer){
     }
 }
 
-// Olho Esquerdo / Direito
-void buffer_update_left_eye(StaticFace_t *buffer, const Eye e) {
-    memcpy(buffer->left_eye, e, sizeof(Eye));
+// Função auxiliar para traduzir um comando recebido em uma expressão para o olho
+static void apply_eye_cmd(StaticFace_t *buffer, eye_cmd_t eye_cmd, display_side_t side){
+    if(side == DISPLAY_L || side == DISPLAY_BOTH){
+        switch(eye_cmd){
+            case EYE_CMD_NEUTRAL:
+                memcpy(&buffer->left_eye, EYE_L_NEUTRAL, sizeof(Eye));
+                break;
+
+            case EYE_CMD_BOOP:
+                memcpy(&buffer->left_eye, EYE_L_BOOP, sizeof(Eye));
+                break;
+
+            default:
+                break;
+        }
+    } if(side == DISPLAY_R || side == DISPLAY_BOTH) {
+        switch(eye_cmd){
+            case EYE_CMD_NEUTRAL:
+                memcpy(&buffer->right_eye, EYE_R_NEUTRAL, sizeof(Eye));
+                break;
+
+            case EYE_CMD_BOOP:
+                memcpy(&buffer->right_eye, EYE_R_BOOP, sizeof(Eye));
+                break;
+
+            default:
+                break;
+        }
+    }
 }
 
-void buffer_update_right_eye(StaticFace_t *buffer, const Eye e) {
-    memcpy(buffer->right_eye, e, sizeof(Eye));
+// Função auxiliar para traduzir um comando recebido em uma expressão para a boca
+static void apply_mouth_cmd(StaticFace_t *buffer, mouth_cmd_t mouth_cmd, display_side_t side){
+    if(side == DISPLAY_L || side == DISPLAY_BOTH){
+        switch(mouth_cmd){
+            case MOUTH_CMD_NEUTRAL:
+                memcpy(&buffer->left_mouth, MOUTH_L_NEUTRAL, sizeof(Mouth));
+                break;
+
+            case MOUTH_CMD_BOOP:
+                memcpy(&buffer->left_mouth, MOUTH_L_BOOP, sizeof(Mouth));
+                break;
+
+            default:
+                break;
+        }
+    } if(side == DISPLAY_R || side == DISPLAY_BOTH) {
+        switch(mouth_cmd){
+            case MOUTH_CMD_NEUTRAL:
+                memcpy(&buffer->right_mouth, MOUTH_R_NEUTRAL, sizeof(Mouth));
+                break;
+
+            case MOUTH_CMD_BOOP:
+                memcpy(&buffer->right_mouth, MOUTH_R_BOOP, sizeof(Mouth));
+                break;
+
+            default:
+                break;
+        }
+    }
 }
 
-// Boca Esquerda / Direita
-void buffer_update_left_mouth(StaticFace_t *buffer, const Mouth m) {
-    memcpy(buffer->left_mouth, m, sizeof(Mouth));
+// Função auxiliar para traduzir um comando recebido em uma expressão para o nariz
+static void apply_nose_cmd(StaticFace_t *buffer, nose_cmd_t nose_cmd, display_side_t side){
+    if(side == DISPLAY_L || side == DISPLAY_BOTH){
+        switch(nose_cmd){
+            case NOSE_CMD_NEUTRAL:
+                memcpy(&buffer->left_nose, NOSE_L_NEUTRAL, sizeof(Nose));
+                break;
+
+            default:
+                break;
+        }
+    } if(side == DISPLAY_R || side == DISPLAY_BOTH) {
+        switch(nose_cmd){
+            case NOSE_CMD_NEUTRAL:
+                memcpy(&buffer->right_nose, NOSE_R_NEUTRAL, sizeof(Nose));
+                break;
+
+            default:
+                break;
+        }
+    }
 }
 
-void buffer_update_right_mouth(StaticFace_t *buffer, const Mouth m) {
-    memcpy(buffer->right_mouth, m, sizeof(Mouth));
+// Função de inicialização do display
+void display_init(){
+    spi_conf();
+
+    // Cria a fila para receber comandos de outras tasks
+    display_cmd_queue = xQueueCreate(5, sizeof(display_cmd_t));
+
+    // Cria a task do display
+    xTaskCreate(display_task, "display_task", 4096, NULL, 5, NULL);
 }
 
-// Nariz Esquerdo / Direito
-void buffer_update_left_nose(StaticFace_t *buffer, const Nose n) {
-    memcpy(buffer->left_nose, n, sizeof(Nose));
+// Envia comando para fila 
+void display_send_expression(display_cmd_t *cmd) {
+    xQueueSend(display_cmd_queue, cmd, 0);
 }
-
-void buffer_update_right_nose(StaticFace_t *buffer, const Nose n) {
-    memcpy(buffer->right_nose, n, sizeof(Nose));
-}
-
-
