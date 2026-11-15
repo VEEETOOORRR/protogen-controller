@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include "led_strip.h"
 
-#define PIN_LEDSTRIP_R 4
-#define PIN_LEDSTRIP_L 5
+#define PIN_LEDSTRIP_R 21
+#define PIN_LEDSTRIP_L 47
 
 #define QNT_LEDS 13
 

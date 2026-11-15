@@ -7,7 +7,7 @@
 
 #include "control.h"
 
-#define MIC_PIN 6 // ADC1_5
+#define MIC_PIN 5
 
 void mic_init();
 
