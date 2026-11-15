@@ -9,8 +9,8 @@
 #include "esp_log.h"
 #include "control.h"
 
-#define SDA_PIN 8
-#define SCL_PIN 9
+#define SDA_PIN 6
+#define SCL_PIN 7
 
 #define LSM6DS3_ADDR 0x6B
 

@@ -3,7 +3,7 @@
 
 #include "driver/ledc.h"
 
-#define PIN_FAN 14
+#define PIN_FAN 38
 #define PWM_FREQ 1000
 #define PWM_DUTY_RESOLUTION LEDC_TIMER_8_BIT
 

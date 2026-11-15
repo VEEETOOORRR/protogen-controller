@@ -9,7 +9,8 @@
 #include "system_events.h"
 
 
-#define BOOPSENSOR_PIN 21
+#define BOOPSENSOR_DATA_PIN 1
+#define BOOPSENSOR_ENABLE_PIN 2
 
 // Inicializa sensor, interrupção e task do boopsensor
 void boopsensor_init();

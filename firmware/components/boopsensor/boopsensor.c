@@ -33,22 +33,32 @@ void boopsensor_init(){
     // Criação da task
     xTaskCreate(boop_task, "boop_task", 2048, NULL, 10, &boop_task_handle);
 
-    gpio_config_t boop_gpio_conf = {
-        .pin_bit_mask = (1ULL << BOOPSENSOR_PIN),
+    gpio_config_t boop_gpio_data_conf = {
+        .pin_bit_mask = (1ULL << BOOPSENSOR_DATA_PIN),
         .mode = GPIO_MODE_INPUT,
         .pull_down_en = GPIO_PULLDOWN_ENABLE,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .intr_type = GPIO_INTR_POSEDGE
     };
 
-    gpio_config(&boop_gpio_conf);
+    gpio_config_t boop_gpio_enable_conf = {
+        .pin_bit_mask = (1ULL << BOOPSENSOR_ENABLE_PIN),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+    };
+
+    gpio_config(&boop_gpio_data_conf);
+    gpio_config(&boop_gpio_enable_conf);
+
+    gpio_set_level(BOOPSENSOR_ENABLE_PIN, 1);
 
     // Instala o serviço global de interrupções
     // O flag ESP_INTR_FLAG_IRAM obriga que o serviço aloque os handlers na RAM.
     gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
 
     // Registra a sua função ISR específica para o pino do TTP223
-    gpio_isr_handler_add(BOOPSENSOR_PIN, boop_isr_handler, NULL);
+    gpio_isr_handler_add(BOOPSENSOR_DATA_PIN, boop_isr_handler, NULL);
 
 
 

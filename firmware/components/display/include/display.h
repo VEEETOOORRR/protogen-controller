@@ -10,9 +10,9 @@
 
 // Configurações SPI
 #define PIN_NUM_MISO  13      // O MAX7219 não envia dados de volta, pino não usado
-#define PIN_NUM_MOSI  10      // Conecta no DIN da primeira matriz
+#define PIN_NUM_MOSI  12      // Conecta no DIN da primeira matriz
 #define PIN_NUM_CS    11      // Conecta no CS/LOAD das matrizes
-#define PIN_NUM_CLK   12      // Conecta no CLK das matrizes
+#define PIN_NUM_CLK   10      // Conecta no CLK das matrizes
 
 
 #define SPI_CLK_SPEED 1000000 // Velocidade do CLK SPI; Default: 1 MHz
